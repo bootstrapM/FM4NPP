@@ -1,4 +1,4 @@
-FROM pytorch/pytorch:2.4.1-cuda12.1-cudnn9-devel
+FROM pytorch/pytorch:2.13.0-cuda13.2-cudnn9-devel
 
 ENV PIP_NO_CACHE_DIR=1 \
     PYTHONUNBUFFERED=1
@@ -12,7 +12,9 @@ COPY . .
 
 RUN python -m pip install --upgrade pip setuptools wheel packaging ninja \
     && python -m pip install -e . \
-    && python -m pip install "causal-conv1d>=1.4,<2" "mamba-ssm>=2.2.4,<3" --no-build-isolation
+    && CAUSAL_CONV1D_FORCE_BUILD=TRUE MAX_JOBS=4 python -m pip install \
+        --no-cache-dir --no-build-isolation "causal-conv1d==1.7.0" \
+    && MAMBA_FORCE_BUILD=TRUE MAX_JOBS=4 python -m pip install \
+        --no-cache-dir --no-build-isolation "mamba-ssm==2.3.2.post1"
 
 CMD ["fm4npp", "diagnose"]
-

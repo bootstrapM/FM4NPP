@@ -2,7 +2,19 @@
 set -euo pipefail
 
 ENV_DIR="${ENV_DIR:-.venv}"
-TORCH_INDEX_URL="${TORCH_INDEX_URL:-https://download.pytorch.org/whl/cu121}"
+TORCH_DEFAULT_SPEC="${TORCH_DEFAULT_SPEC:-torch==2.13.0}"
+TORCH_DEFAULT_INDEX_URL="${TORCH_DEFAULT_INDEX_URL:-https://download.pytorch.org/whl/cu132}"
+
+install_torch() {
+    local spec="$1"
+    local index_url="${TORCH_INDEX_URL-${TORCH_DEFAULT_INDEX_URL}}"
+    local install_args=("${spec}")
+
+    if [[ -n "${index_url}" ]]; then
+        install_args+=(--index-url "${index_url}")
+    fi
+    "${ENV_DIR}/bin/python" -m pip install "${install_args[@]}"
+}
 
 select_python() {
     local candidates=()
@@ -49,10 +61,21 @@ EOF
 fi
 
 echo "Using ${PYTHON_BIN} ($("${PYTHON_BIN}" --version 2>&1))"
-"${PYTHON_BIN}" -m venv "${ENV_DIR}"
-"${ENV_DIR}/bin/python" -m pip install --upgrade pip setuptools wheel packaging ninja
-"${ENV_DIR}/bin/python" -m pip install torch==2.4.1 --index-url "${TORCH_INDEX_URL}"
-"${ENV_DIR}/bin/python" -m pip install -e ".[dev]"
-"${ENV_DIR}/bin/python" -m pip install "causal-conv1d>=1.4,<2" "mamba-ssm>=2.2.4,<3" --no-build-isolation
+if [[ ! -x "${ENV_DIR}/bin/python" ]]; then
+    "${PYTHON_BIN}" -m venv "${ENV_DIR}"
+else
+    echo "Reusing existing environment at ${ENV_DIR}"
+fi
 
-"${ENV_DIR}/bin/fm4npp" diagnose --require-fused
+"${ENV_DIR}/bin/python" -m pip install --upgrade pip setuptools wheel packaging ninja
+
+if [[ -n "${TORCH_SPEC:-}" ]]; then
+    install_torch "${TORCH_SPEC}"
+elif ! "${ENV_DIR}/bin/python" -c 'import torch' >/dev/null 2>&1; then
+    install_torch "${TORCH_DEFAULT_SPEC}"
+else
+    echo "Preserving the PyTorch already installed in ${ENV_DIR}."
+fi
+
+"${ENV_DIR}/bin/python" -m pip install -e ".[dev]"
+bash scripts/rebuild_gpu_extensions.sh

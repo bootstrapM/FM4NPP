@@ -34,8 +34,8 @@ weights and datasets stay outside Git.
 
 ## Fastest start on an NVIDIA GPU
 
-Requirements: Linux, Python 3.10 or 3.11, an NVIDIA GPU, a working compiler,
-and CUDA 12.1-compatible drivers.
+Requirements: Linux, Python 3.10-3.12, an NVIDIA GPU, a working C++ compiler,
+and a CUDA toolkit (including `nvcc`) compatible with the installed PyTorch.
 
 ```bash
 git clone <your-new-repository-url>
@@ -53,8 +53,31 @@ fm4npp infer \
   --output outputs/smoke.npz
 ```
 
-The setup script ends with `fm4npp diagnose --require-fused`, so a CUDA or
-native-extension problem is caught before the first experiment.
+The setup script preserves PyTorch when reusing an existing virtual environment
+and builds both native extensions against that exact installation. A fresh
+environment defaults to PyTorch 2.13.0; override it with `TORCH_SPEC` and,
+optionally, `TORCH_INDEX_URL` when your cluster requires a particular wheel.
+The default index is the official CUDA 13.2 channel:
+
+```bash
+TORCH_SPEC='torch==2.13.0' \
+TORCH_INDEX_URL='https://download.pytorch.org/whl/cu132' \
+bash scripts/setup_gpu_env.sh
+```
+
+For an RTX PRO 6000 Blackwell (`sm_120`) node such as Empire AI Alpha, create a
+separate environment instead of reusing an older CUDA 12.1 environment:
+
+```bash
+ENV_DIR=.venv-alpha \
+TORCH_SPEC='torch==2.13.0' \
+TORCH_INDEX_URL='https://download.pytorch.org/whl/cu132' \
+MAX_JOBS=4 \
+bash scripts/setup_gpu_env.sh
+```
+
+It ends with `fm4npp diagnose --require-fused`, so a CUDA or native-extension
+problem is caught before the first experiment.
 
 The script automatically searches for `python3.12`, `python3.11`,
 `python3.10`, and then compatible `python3`/`python` commands. On module-based
@@ -260,6 +283,11 @@ fm4npp diagnose
 
 - If fused imports fail, ensure `torch` is installed before `mamba-ssm` and use
   `--no-build-isolation`, as done by `scripts/setup_gpu_env.sh`.
+- An `undefined symbol` error from `selective_scan_cuda` or
+  `causal_conv1d_cuda` means a native extension was built for another PyTorch
+  ABI. Do not change PyTorch in place without rebuilding the extensions. Repair
+  the current environment with
+  `MAX_JOBS=4 bash scripts/rebuild_gpu_extensions.sh`.
 - A CUDA driver can support a newer runtime than the locally installed toolkit;
   check both `nvidia-smi` and the `torch_cuda` field from `fm4npp diagnose`.
 - `--backend auto` selects fused Mamba only when it is importable and the input
