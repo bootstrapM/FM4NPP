@@ -56,6 +56,15 @@ fm4npp infer \
 The setup script ends with `fm4npp diagnose --require-fused`, so a CUDA or
 native-extension problem is caught before the first experiment.
 
+The script automatically searches for `python3.12`, `python3.11`,
+`python3.10`, and then compatible `python3`/`python` commands. On module-based
+clusters, load Python first or specify its path explicitly:
+
+```bash
+module load python/3.11                # module name varies by site
+PYTHON_BIN="$(command -v python3)" bash scripts/setup_gpu_env.sh
+```
+
 To download explicitly—useful before moving to an offline cluster:
 
 ```bash
@@ -70,7 +79,7 @@ over sequence positions. It is intended for correctness checks and short
 events, not throughput measurements.
 
 ```bash
-python3.10 -m venv .venv
+python3 -m venv .venv  # use any installed Python 3.10--3.12
 source .venv/bin/activate
 python -m pip install -e ".[dev]"
 
@@ -282,4 +291,3 @@ adapter; backbone inference alone cannot reproduce the downstream metrics.
 - [TPCpp-10M dataset](https://zenodo.org/records/16970029)
 
 Please cite both the FM4NPP and TPCpp-10M papers when using the model and data.
-
