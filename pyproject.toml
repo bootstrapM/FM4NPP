@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fm4npp-inference"
+version = "0.1.0"
+description = "Reproducible inference harness for the FM4NPP proton-proton collision foundation model"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+  "huggingface-hub>=0.26,<2",
+  "numpy>=1.24,<3",
+  "ruamel.yaml>=0.18,<1",
+  "torch>=2.4,<3",
+]
+
+[project.optional-dependencies]
+gpu = [
+  "causal-conv1d>=1.4,<2",
+  "mamba-ssm>=2.2.4,<3",
+]
+dev = [
+  "pytest>=8,<10",
+]
+
+[project.scripts]
+fm4npp = "fm4npp_inference.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+fm4npp_inference = ["data/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
